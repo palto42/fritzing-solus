@@ -1,8 +1,11 @@
 name       : fritzing
-version    : 0.9.10
-release    : 13
+version    : 1.0.0
+release    : 10
 source     :
-    - git|https://github.com/fritzing/fritzing-app.git : 29c2cede3a0475ed770db1ee502fdebf6bf3a23d
+    # Not yet 1.0.0 code ! https://forum.fritzing.org/t/can-t-find-source-code/19723/12
+    - git|https://github.com/fritzing/fritzing-app.git : 6b14cfe9016652e47b5da53ce3d199175736e43e
+    # Add svg++ library
+    - https://github.com/svgpp/svgpp/archive/refs/tags/v1.3.0.tar.gz : cb14e9de41994e3451aaee61d8284848bfccc7f9a5bf1873a76f199ff0c20b74
 license    :
     - CC-BY-SA-3.0
     - GPL-3.0-or-later
@@ -12,7 +15,7 @@ description: |
     The Fritzing application is an Electronic Design Automation software with a low entry barrier, suited for the needs of makers and hobbyists. It offers a unique real-life "breadboard" view, and a parts library with many commonly used high-level components. Fritzing makes it very easy to communicate about circuits, as well as to turn them into PCB layouts ready for production. It is particularly popular among Arduino and Raspberry Pi users, and is widely used in education and creative tinkering.
 builddeps  :
     - pkgconfig(libgit2)
-    - pkgconfig(ngspice) 
+    - pkgconfig(ngspice)
     - pkgconfig(Qt5SerialPort)
     - pkgconfig(Qt5Svg)
     - pkgconfig(quazip)
@@ -21,12 +24,20 @@ builddeps  :
 rundeps    :
     - fritzing-parts
 setup      : |
+    # Patch phoenix.pro
     sed 's|LIBGIT_STATIC = true|LIBGIT_STATIC = false|' -i phoenix.pro
-    # Patch quazip 1.x path for old version 0.9.1 in Solus
-    sed 's|$$PWD/../../quazip_qt5|/usr/include/quazip5|' -i pri/quazipdetect.pri
+    # Patch quazip path to find it in Solus
+    sed 's|$$PWD/../../quazip_qt$$QT_MAJOR_VERSION|/usr/include/quazip5|' -i pri/quazipdetect.pri
     sed 's|$${QUAZIPPATH}/include/quazip|/usr/include/quazip5|' -i pri/quazipdetect.pri
     sed 's|$${QUAZIPPATH}/lib|/usr/lib64|' -i pri/quazipdetect.pri
     sed 's|-lquazip1-qt5|-lquazip5|' -i pri/quazipdetect.pri
+    # Patch ngspice path
+    sed 's|../../ngspice-40|/usr/include/ngspice|' -i pri/spicedetect.pri
+    sed 's|$$NGSPICEPATH/include|/usr/include/ngspice|' -i pri/spicedetect.pri
+    # Extract extra svg++ package
+    tar xf $sources/v1.3.0.tar.gz -C ..
+    SVGPP_PATH=$(dirname $workdir)/svgpp-1.3.0
+    sed "s|\$\$PWD/../../svgpp-1.3.0|${SVGPP_PATH}|" -i pri/svgppdetect.pri
     %qmake DEFINES=QUAZIP_INSTALLED
 build      : |
     %make
